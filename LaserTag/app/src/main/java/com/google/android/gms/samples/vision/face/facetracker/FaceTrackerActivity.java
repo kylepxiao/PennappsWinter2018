@@ -90,6 +90,14 @@ public final class FaceTrackerActivity extends AppCompatActivity {
     private Camera camera;
     Camera.Parameters params;
 
+
+    // Flash variables
+    private static final String TAG = "Flashlight";
+    private Camera mCamera;
+    private Camera.Parameters parameters;
+    private CameraManager camManager;
+    private Context context;
+
     // getting camera parameters
     private void getCamera() {
         if (camera == null) {
@@ -103,22 +111,63 @@ public final class FaceTrackerActivity extends AppCompatActivity {
     }
 
     /*
-    * Turning On flash
+    * Turning On Flash
     */
-    private void turnOnFlash() {
-        if (camera == null || params == null) {
-            return;
-        }
-        try {
-            Log.i("asdf", "This line");
-            //params = camera.getParameters();
-            params = Camera.open().getParameters();
-            Log.i("asdf", "That line");
-            params.setFlashMode(Camera.Parameters.FLASH_MODE_TORCH);
-            camera.setParameters(params);
-            camera.startPreview();
-        }catch (Exception e) {
-            Log.i("asdf", Log.getStackTraceString(e));
+    private void turnFlashlightOn() {
+        // if (camera == null || params == null) {
+        //     return;
+        // }
+        // try {
+        //     Log.i("asdf", "This line");
+        //     //params = camera.getParameters();
+        //     params = Camera.open().getParameters();
+        //     Log.i("asdf", "That line");
+        //     params.setFlashMode(Camera.Parameters.FLASH_MODE_TORCH);
+        //     camera.setParameters(params);
+        //     camera.startPreview();
+        // }catch (Exception e) {
+        //     Log.i("asdf", Log.getStackTraceString(e));
+        // }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                try {
+                    camManager = (CameraManager) context.getSystemService(Context.CAMERA_SERVICE);
+                    String cameraId = null; // Usually front camera is at 0 position.
+                    if (camManager != null) {
+                        cameraId = camManager.getCameraIdList()[0];
+                        camManager.setTorchMode(cameraId, true);
+                    }
+                } catch (CameraAccessException e) {
+                    Log.e(TAG, e.toString());
+                }
+            } else {
+                mCamera = Camera.open();
+                parameters = mCamera.getParameters();
+                parameters.setFlashMode(Camera.Parameters.FLASH_MODE_TORCH);
+                mCamera.setParameters(parameters);
+                mCamera.startPreview();
+            }
+    }
+    /*
+    * Turning Off Flash
+    */
+    private void turnFlashlightOff() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            try {
+                String cameraId;
+                camManager = (CameraManager) context.getSystemService(Context.CAMERA_SERVICE);
+                if (camManager != null) {
+                    cameraId = camManager.getCameraIdList()[0]; // Usually front camera is at 0 position.
+                    camManager.setTorchMode(cameraId, false);
+                }
+            } catch (CameraAccessException e) {
+                e.printStackTrace();
+            }
+        } else {
+            mCamera = Camera.open();
+            parameters = mCamera.getParameters();
+            parameters.setFlashMode(Camera.Parameters.FLASH_MODE_OFF);
+            mCamera.setParameters(parameters);
+            mCamera.stopPreview();
         }
     }
     //==============================================================================================
@@ -146,6 +195,7 @@ public final class FaceTrackerActivity extends AppCompatActivity {
             public void onClick(View v) {
                 Log.i("asdf", "FIRIN MAH LAZAR");
                 clicked = true;
+                turnFlashlightOn();
 
                 animate(demoImage, imagesToShow, 0, false);
 
@@ -155,6 +205,7 @@ public final class FaceTrackerActivity extends AppCompatActivity {
 
                     public void onFinish() {
                         clicked = false;
+                        turnFlashlightOff();
                     }
                 }.start();
             }
