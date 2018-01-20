@@ -27,6 +27,14 @@
           android:src="@drawable/crosshair"
           />
 
+      <ImageView
+          android:layout_width="wrap_content"
+          android:layout_height="wrap_content"
+          android:maxWidth="50px"
+          android:maxHeight="50px"
+          android:src="@drawable/empty"
+          />
+
       <Button
           android:id="@+id/fire"
           android:layout_height="fill_parent"
