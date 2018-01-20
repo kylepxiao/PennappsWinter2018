@@ -27,6 +27,7 @@ import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Rect;
 import android.hardware.Camera;
+import android.hardware.camera2.CameraAccessException;
 import android.hardware.camera2.CameraManager;
 import android.media.MediaPlayer;
 import android.os.Build;
@@ -72,7 +73,7 @@ import java.security.Policy;
  * overlay graphics to indicate the position, size, and ID of each face.
  */
 public final class FaceTrackerActivity extends AppCompatActivity {
-    private static final String TAG = "FaceTracker";
+    private static final String TAG1 = "FaceTracker";
 
     private CameraSource mCameraSource = null;
 
@@ -195,7 +196,7 @@ public final class FaceTrackerActivity extends AppCompatActivity {
             public void onClick(View v) {
                 Log.i("asdf", "FIRIN MAH LAZAR");
                 clicked = true;
-                turnFlashlightOn();
+                //turnFlashlightOn();
 
                 animate(demoImage, imagesToShow, 0, false);
 
@@ -205,7 +206,7 @@ public final class FaceTrackerActivity extends AppCompatActivity {
 
                     public void onFinish() {
                         clicked = false;
-                        turnFlashlightOff();
+                        //turnFlashlightOff();
                     }
                 }.start();
             }
