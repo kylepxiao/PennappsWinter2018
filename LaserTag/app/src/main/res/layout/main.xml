@@ -33,7 +33,8 @@
           android:layout_height="wrap_content"
           android:maxWidth="50px"
           android:maxHeight="50px"
-          android:src="@drawable/empty"
+          android:src="@drawable/laser_solid"
+          android:visibility="invisible"
           />
 
       <Button

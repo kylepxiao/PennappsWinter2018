@@ -165,28 +165,26 @@ public final class FaceTrackerActivity extends AppCompatActivity {
                 //images[] <-- Holds R references to the images to display
                 //imageIndex <-- index of the first image to show in images[]
                 //forever <-- If equals true then after the last image it starts all over again with the first image resulting in an infinite loop. You have been warned.
-
-                int fadeInDuration = 500; // Configure time values here
+                /*int fadeInDuration = 5; // Configure time values here
                 int timeBetween = 0;
-                int fadeOutDuration = 500;
+                int fadeOutDuration = 1;
 
                 imageView.setVisibility(View.INVISIBLE);    //Visible or invisible by default - this will apply when the animation ends
                 imageView.setImageResource(images[imageIndex]);
 
-                Animation fadeIn = new AlphaAnimation(0, 1);
-                fadeIn.setInterpolator(new DecelerateInterpolator()); // add this
+                Animation fadeIn = new AlphaAnimation(1, 1);
+                //fadeIn.setInterpolator(new DecelerateInterpolator()); // add this
                 fadeIn.setDuration(fadeInDuration);
 
-                Animation fadeOut = new AlphaAnimation(1, 0);
-                fadeOut.setInterpolator(new AccelerateInterpolator()); // and this
-                fadeOut.setStartOffset(fadeInDuration + timeBetween);
+                Animation fadeOut = new AlphaAnimation(1, 1);
+                //fadeOut.setInterpolator(new AccelerateInterpolator()); // and this
+                //fadeOut.setStartOffset(fadeInDuration + timeBetween);
                 fadeOut.setDuration(fadeOutDuration);
 
                 AnimationSet animation = new AnimationSet(false); // change to false
-                animation.addAnimation(fadeIn);
-                animation.addAnimation(fadeOut);
+                //animation.addAnimation(fadeIn);
+                //animation.addAnimation(fadeOut);
                 animation.setRepeatCount(1);
-                imageView.setAnimation(animation);
 
                 animation.setAnimationListener(new Animation.AnimationListener() {
                     public void onAnimationEnd(Animation animation) {
@@ -206,7 +204,16 @@ public final class FaceTrackerActivity extends AppCompatActivity {
                     public void onAnimationStart(Animation animation) {
                         // TODO Auto-generated method stub
                     }
-                });
+                });*/
+                imageView.setVisibility(View.VISIBLE);
+                new CountDownTimer(500, 500) {
+                    public void onTick(long millisUntilFinished) {
+                    }
+
+                    public void onFinish() {
+                        imageView.setVisibility(View.INVISIBLE);
+                    }
+                }.start();
             }
             //mp.start();
             //turnOnFlash();
