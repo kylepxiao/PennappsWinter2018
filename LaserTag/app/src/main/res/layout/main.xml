@@ -42,7 +42,7 @@
           android:id="@+id/fire"
           android:layout_height="fill_parent"
           android:layout_width="fill_parent"
-          android:text="Health: 100/100"
+          android:text="Health: 5/5     Points: 0"
           android:visibility="visible"
           android:background="@android:color/transparent"
           android:textSize="20sp"/>

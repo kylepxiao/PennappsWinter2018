@@ -38,8 +38,8 @@ class FaceGraphic extends GraphicOverlay.Graphic {
     private static final float ID_Y_OFFSET = 50.0f;
     private static final float ID_X_OFFSET = -50.0f;
     private static final float BOX_STROKE_WIDTH = 5.0f;
-    public static Bitmap afro;
-    public static Bitmap crosshair;
+    public Bitmap afro;
+    public Bitmap crosshair;
 
     private static final int COLOR_CHOICES[] = {
         Color.BLUE,

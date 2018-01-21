@@ -34,6 +34,7 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.CountDownTimer;
 import android.os.Environment;
+import android.os.Handler;
 import android.provider.MediaStore;
 import android.support.design.widget.Snackbar;
 import android.support.v4.app.ActivityCompat;
@@ -51,13 +52,19 @@ import android.graphics.Canvas;
 import android.widget.ImageView;
 
 import com.android.volley.AuthFailureError;
+import com.android.volley.Cache;
+import com.android.volley.Network;
 import com.android.volley.Request;
 import com.android.volley.RequestQueue;
 import com.android.volley.Response;
 import com.android.volley.VolleyError;
+import com.android.volley.toolbox.BasicNetwork;
+import com.android.volley.toolbox.DiskBasedCache;
+import com.android.volley.toolbox.HurlStack;
 import com.android.volley.toolbox.JsonArrayRequest;
 import com.android.volley.toolbox.JsonObjectRequest;
 
+import com.android.volley.toolbox.StringRequest;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.GoogleApiAvailability;
 import com.google.android.gms.vision.CameraSource;
@@ -74,7 +81,16 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Timer;
+import java.util.TimerTask;
 
+import org.apache.http.HttpResponse;
+import org.apache.http.client.HttpClient;
+import org.apache.http.client.methods.HttpPost;
+import org.apache.http.entity.mime.HttpMultipartMode;
+import org.apache.http.entity.mime.MultipartEntity;
+import org.apache.http.entity.mime.content.ByteArrayBody;
+import org.apache.http.impl.client.DefaultHttpClient;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -93,16 +109,28 @@ public final class FaceTrackerActivity extends AppCompatActivity {
     private CameraSourcePreview mPreview;
     private GraphicOverlay mGraphicOverlay;
 
+    private String name = "Alice";
+
+    private String enemy = "Bob";
+
     private static final int RC_HANDLE_GMS = 9001;
     // permission request codes need to be < 256
     private static final int RC_HANDLE_CAMERA_PERM = 2;
 
     private static boolean clicked = false;
 
+    private int Points = 0;
+
+    private int Health = 5;
+
+    private int EnemyHealth = 5;
+
     MediaPlayer mp;
 
     private Camera camera;
     Camera.Parameters params;
+
+    RequestQueue mRequestQueue;
 
 
     // Flash variables
@@ -197,7 +225,7 @@ public final class FaceTrackerActivity extends AppCompatActivity {
                     Bitmap bitmap = BitmapFactory.decodeByteArray(data , 0, data .length);
                     Log.i("asdf", "TOOK IN DATA");
                     if(bitmap!=null){
-                        ((ImageView) findViewById(R.id.crosshair)).setImageBitmap(bitmap);
+                        //((ImageView) findViewById(R.id.crosshair)).setImageBitmap(bitmap);
                         String url = "https://eastus.api.cognitive.microsoft.com/face/v1.0/detect?returnFaceId=true&returnFaceLandmarks=false";
                         HashMap<String, String> params = new HashMap<String, String>();
                         String image_path = "your local image path";
@@ -259,7 +287,7 @@ public final class FaceTrackerActivity extends AppCompatActivity {
     //==============================================================================================
     // Activity Methods
     //==============================================================================================
-
+    final Handler handler = new Handler();
     /**
      * Initializes the UI and initiates the creation of a face detector.
      */
@@ -268,7 +296,53 @@ public final class FaceTrackerActivity extends AppCompatActivity {
         super.onCreate(icicle);
         setContentView(R.layout.main);
         //getCamera();
-         mp = MediaPlayer.create(this, R.raw.lazer);
+        // Instantiate the cache
+        Cache cache = new DiskBasedCache(getCacheDir(), 1024 * 1024); // 1MB cap
+
+        // Set up the network to use HttpURLConnection as the HTTP client.
+        Network network = new BasicNetwork(new HurlStack());
+
+        // Instantiate the RequestQueue with the cache and network.
+        mRequestQueue = new RequestQueue(cache, network);
+
+        // Start the queue
+        mRequestQueue.start();
+
+
+        final Runnable r = new Runnable() {
+            public void run() {
+                handler.postDelayed(this, 3000);
+                String url ="https://blooming-hollows-76968.herokuapp.com/get_table";
+                JsonArrayRequest jsObjRequest = new JsonArrayRequest
+                        (url, new Response.Listener<JSONArray>() {
+                            @Override
+                            public void onResponse(JSONArray response) {
+                                JSONObject person = findByName(response, name);
+                                JSONObject badperson = findByName(response, enemy);
+                                try {
+                                    Points = (Integer) person.get("points");
+                                    Health = (Integer) person.get("health");
+                                    EnemyHealth = (Integer) badperson.get("health");
+                                    ((Button)findViewById(R.id.fire)).setText("Health: " + Integer.toString(Health) + "/5     " + "Score: " + Integer.toString(Points));
+                                } catch (JSONException e) {
+                                    e.printStackTrace();
+                                }
+                            }
+                        }, new Response.ErrorListener() {
+
+                            @Override
+                            public void onErrorResponse(VolleyError error) {
+                                // TODO Auto-generated method stub
+
+                            }
+                        });
+                //MySingleton.getInstance(this).addToRequestQueue(jsObjRequest);
+                mRequestQueue.add(jsObjRequest);
+            }
+        };
+        handler.postDelayed(r, 0000);
+
+        mp = MediaPlayer.create(this, R.raw.lazer);
         Button fire = (Button) findViewById(R.id.fire);
 
         final ImageView demoImage = (ImageView)findViewById(R.id.asdf);
@@ -328,12 +402,11 @@ public final class FaceTrackerActivity extends AppCompatActivity {
                     }
                 }.start();
             }
-            //mp.start();
-            //turnOnFlash();
         });
 
         mPreview = (CameraSourcePreview) findViewById(R.id.preview);
         mGraphicOverlay = (GraphicOverlay) findViewById(R.id.faceOverlay);
+
 
         // Check for the camera permission before accessing the camera.  If the
         // permission is not granted yet, request permission.
@@ -536,6 +609,17 @@ public final class FaceTrackerActivity extends AppCompatActivity {
         }
     }
 
+    private JSONObject findByName(JSONArray arr, String name) {
+        for (int i = 0; i < arr.length(); i++) {
+            try {
+                if (arr.getJSONObject(i).get("name").equals(name)) {
+                    return (JSONObject) arr.get(i);
+                }
+            }catch(Exception e) {}
+        }
+        return null;
+    }
+
     //==============================================================================================
     // Graphic Face Tracker
     //==============================================================================================
@@ -560,8 +644,20 @@ public final class FaceTrackerActivity extends AppCompatActivity {
         private FaceGraphic mFaceGraphic;
 
         GraphicFaceTracker(GraphicOverlay overlay) {
+            int fro = R.drawable.afro_5;
+            if (EnemyHealth == 4) {
+                fro = R.drawable.afro_4;
+            } else if (EnemyHealth == 3) {
+                fro = R.drawable.afro_3;
+            } else if (EnemyHealth == 2) {
+                fro = R.drawable.afro_2;
+            } else if (EnemyHealth == 1) {
+                fro = R.drawable.afro_1;
+            } else if (EnemyHealth == 0) {
+                fro = R.drawable.bald;
+            }
             mOverlay = overlay;
-            mFaceGraphic = new FaceGraphic(overlay, BitmapFactory.decodeResource(getResources(), R.drawable.afro), BitmapFactory.decodeResource(getResources(), R.drawable.crosshair));
+            mFaceGraphic = new FaceGraphic(overlay, BitmapFactory.decodeResource(getResources(), fro), BitmapFactory.decodeResource(getResources(), R.drawable.crosshair));
         }
 
         /**
@@ -579,12 +675,50 @@ public final class FaceTrackerActivity extends AppCompatActivity {
         public void onUpdate(FaceDetector.Detections<Face> detectionResults, Face face) {
             mOverlay.add(mFaceGraphic);
             mFaceGraphic.updateFace(face);
+            int fro = R.drawable.afro_5;
+            if (EnemyHealth == 4) {
+                fro = R.drawable.afro_4;
+            } else if (EnemyHealth == 3) {
+                fro = R.drawable.afro_3;
+            } else if (EnemyHealth == 2) {
+                fro = R.drawable.afro_2;
+            } else if (EnemyHealth == 1) {
+                fro = R.drawable.afro_1;
+            } else if (EnemyHealth == 0){
+                fro = R.drawable.bald;
+            }
+            mFaceGraphic.afro = BitmapFactory.decodeResource(getResources(), fro);
             if (clicked) {
-                Log.i("asdf", Float.toString(face.getPosition().y));
                 Rect hitbox = new Rect(Math.round(face.getPosition().x), Math.round(face.getPosition().y), Math.round(face.getPosition().x + face.getWidth()), Math.round(face.getPosition().y + face.getHeight()));
                 if (hitbox.contains(240, 320)) {
                     takePicture();
-                    mp.start();
+
+                    String url ="https://blooming-hollows-76968.herokuapp.com/register_hit";
+
+                    // Formulate the request and handle the response.
+                    StringRequest stringRequest = new StringRequest(Request.Method.POST, url,
+                            new Response.Listener<String>() {
+                                @Override
+                                public void onResponse(String response) {
+                                    Points += 100;
+                                }
+                            },
+                            new Response.ErrorListener() {
+                                @Override
+                                public void onErrorResponse(VolleyError error) {
+                                    Log.i("asdf", Log.getStackTraceString(error));
+                                    error.printStackTrace();
+                                }
+                            }) {
+                        @Override
+                        public Map<String, String> getParams() {
+                            HashMap<String, String> params = new HashMap<String, String>();
+                            params.put("data", "Alice-hit-Bob");
+                            return params;
+                        }
+                    };
+                    //MySingleton.getInstance(this).addToRequestQueue(jsObjRequest);
+                    mRequestQueue.add(stringRequest);
                 }
             }
         }
