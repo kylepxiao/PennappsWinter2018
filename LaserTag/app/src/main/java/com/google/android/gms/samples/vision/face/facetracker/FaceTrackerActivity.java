@@ -127,6 +127,14 @@ public final class FaceTrackerActivity extends AppCompatActivity {
 
     MediaPlayer mp;
 
+    MediaPlayer zoop;
+
+    MediaPlayer yeah;
+
+    MediaPlayer alive;
+
+    MediaPlayer dust;
+
     private Camera camera;
     Camera.Parameters params;
 
@@ -223,7 +231,6 @@ public final class FaceTrackerActivity extends AppCompatActivity {
             public void onPictureTaken(byte[] data) {
                 if (data != null) {
                     Bitmap bitmap = BitmapFactory.decodeByteArray(data , 0, data .length);
-                    Log.i("asdf", "TOOK IN DATA");
                     if(bitmap!=null){
                         //((ImageView) findViewById(R.id.crosshair)).setImageBitmap(bitmap);
                         String url = "https://eastus.api.cognitive.microsoft.com/face/v1.0/detect?returnFaceId=true&returnFaceLandmarks=false";
@@ -308,6 +315,15 @@ public final class FaceTrackerActivity extends AppCompatActivity {
         // Start the queue
         mRequestQueue.start();
 
+        mp = MediaPlayer.create(this, R.raw.lazer);
+
+        zoop = MediaPlayer.create(this, R.raw.laser);
+
+        yeah = MediaPlayer.create(this, R.raw.yeah);
+
+        alive = MediaPlayer.create(this, R.raw.alive);
+
+        dust = MediaPlayer.create(this, R.raw.dust);
 
         final Runnable r = new Runnable() {
             public void run() {
@@ -320,8 +336,12 @@ public final class FaceTrackerActivity extends AppCompatActivity {
                                 JSONObject person = findByName(response, name);
                                 JSONObject badperson = findByName(response, enemy);
                                 try {
+                                    int beforeHealth = Health;
                                     Points = (Integer) person.get("points");
                                     Health = (Integer) person.get("health");
+                                    if (Health < beforeHealth) {
+                                        dust.start();
+                                    }
                                     EnemyHealth = (Integer) badperson.get("health");
                                     ((Button)findViewById(R.id.fire)).setText("Health: " + Integer.toString(Health) + "/5     " + "Score: " + Integer.toString(Points));
                                 } catch (JSONException e) {
@@ -342,7 +362,6 @@ public final class FaceTrackerActivity extends AppCompatActivity {
         };
         handler.postDelayed(r, 0000);
 
-        mp = MediaPlayer.create(this, R.raw.lazer);
         Button fire = (Button) findViewById(R.id.fire);
 
         final ImageView demoImage = (ImageView)findViewById(R.id.asdf);
@@ -353,7 +372,7 @@ public final class FaceTrackerActivity extends AppCompatActivity {
         {
             @Override
             public void onClick(View v) {
-                Log.i("asdf", "FIRIN MAH LAZAR");
+                zoop.start();
                 //clicked = true;
                 //turnFlashlightOn();
                 animate(demoImage);
@@ -691,16 +710,28 @@ public final class FaceTrackerActivity extends AppCompatActivity {
             if (clicked) {
                 Rect hitbox = new Rect(Math.round(face.getPosition().x), Math.round(face.getPosition().y), Math.round(face.getPosition().x + face.getWidth()), Math.round(face.getPosition().y + face.getHeight()));
                 if (hitbox.contains(240, 320)) {
+                    yeah.start();
+
                     takePicture();
 
-                    String url ="https://blooming-hollows-76968.herokuapp.com/register_hit";
+                    String url = "https://blooming-hollows-76968.herokuapp.com/register_hit";
 
                     // Formulate the request and handle the response.
-                    StringRequest stringRequest = new StringRequest(Request.Method.POST, url,
+                    StringRequest jsObjRequest = new StringRequest(Request.Method.POST, url,
                             new Response.Listener<String>() {
                                 @Override
                                 public void onResponse(String response) {
-                                    Points += 100;
+                                    try {
+                                        JSONObject formattedResponse = new JSONObject(response);
+                                        int before = Points;
+                                        Log.i("asdf", response.toString());
+                                        Points = (Integer) formattedResponse.get("score");
+                                        if (Points % 500 < before % 500) {
+                                            alive.start();
+                                        }
+                                    } catch (JSONException e) {
+                                        e.printStackTrace();
+                                    }
                                 }
                             },
                             new Response.ErrorListener() {
@@ -712,13 +743,44 @@ public final class FaceTrackerActivity extends AppCompatActivity {
                             }) {
                         @Override
                         public Map<String, String> getParams() {
-                            HashMap<String, String> params = new HashMap<String, String>();
-                            params.put("data", "Alice-hit-Bob");
+                            HashMap<String, String> params = new HashMap<>();
+                            params.put("data", name + "-hit-" + enemy);
                             return params;
                         }
                     };
+                    /*JsonObjectRequest jsObjRequest = new JsonObjectRequest
+                            (Request.Method.POST, url, null, new Response.Listener<JSONObject>() {
+
+                                @Override
+                                public void onResponse(JSONObject response) {
+                                    try {
+                                        int before = Points;
+                                        Log.i("asdf", response.toString());
+                                        Points = (Integer) response.get("score");
+                                        if (Points % 500 < before % 500) {
+                                            alive.start();
+                                        }
+                                    } catch (JSONException e) {
+                                        e.printStackTrace();
+                                    }
+                                }
+                            }, new Response.ErrorListener() {
+
+                                @Override
+                                public void onErrorResponse(VolleyError error) {
+                                    // TODO Auto-generated method stub
+                                    Log.i("asdf", Log.getStackTraceString(error));
+                                }
+                            }) {
+                        @Override
+                        public Map<String, String> getParams() {
+                            Map<String, String> params = new HashMap<>();
+                            params.put("data", name + "-hit-" + enemy);
+                            return params;
+                        }
+                    };*/
                     //MySingleton.getInstance(this).addToRequestQueue(jsObjRequest);
-                    mRequestQueue.add(stringRequest);
+                    mRequestQueue.add(jsObjRequest);
                 }
             }
         }
