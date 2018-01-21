@@ -202,7 +202,7 @@ public final class FaceTrackerActivity extends AppCompatActivity {
                         HashMap<String, String> params = new HashMap<String, String>();
                         String image_path = "your local image path";
                         params.put("your_extra_params", "value");
-                        MultipartRequest multipartRequest =
+                        /*MultipartRequest multipartRequest =
                                 new MultipartRequest(url, params, image_path, new Response.Listener<String>() {
                                     @Override
                                     public void onResponse(String response) {
@@ -220,7 +220,7 @@ public final class FaceTrackerActivity extends AppCompatActivity {
                                         }
                                     });
                         // Add the request to the RequestQueue.
-                        MySingleton.getInstance(context).addToRequestQueue(multipartrequest);
+                        MySingleton.getInstance(context).addToRequestQueue(multipartrequest);*/
 
 
 
