@@ -50,6 +50,14 @@ import android.widget.Button;
 import android.graphics.Canvas;
 import android.widget.ImageView;
 
+import com.android.volley.AuthFailureError;
+import com.android.volley.Request;
+import com.android.volley.RequestQueue;
+import com.android.volley.Response;
+import com.android.volley.VolleyError;
+import com.android.volley.toolbox.JsonArrayRequest;
+import com.android.volley.toolbox.JsonObjectRequest;
+
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.GoogleApiAvailability;
 import com.google.android.gms.vision.CameraSource;
@@ -64,7 +72,12 @@ import com.google.android.gms.vision.CameraSource.PictureCallback;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.security.Policy;
+import java.util.HashMap;
+import java.util.Map;
+
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
 
 //import static android.hardware.Camera.*;
 
@@ -98,6 +111,10 @@ public final class FaceTrackerActivity extends AppCompatActivity {
     private Camera.Parameters parameters;
     private CameraManager camManager;
     private Context context;
+
+    private String getUserId (Bitmap bmp) {
+        return "";
+    }
 
     // getting camera parameters
     private void getCamera() {
@@ -171,6 +188,74 @@ public final class FaceTrackerActivity extends AppCompatActivity {
             mCamera.stopPreview();
         }
     }
+
+    private void takePicture(){
+        mCameraSource.takePicture(null, new PictureCallback(){
+            @Override
+            public void onPictureTaken(byte[] data) {
+                if (data != null) {
+                    Bitmap bitmap = BitmapFactory.decodeByteArray(data , 0, data .length);
+                    Log.i("asdf", "TOOK IN DATA");
+                    if(bitmap!=null){
+                        ((ImageView) findViewById(R.id.crosshair)).setImageBitmap(bitmap);
+                        String url = "https://eastus.api.cognitive.microsoft.com/face/v1.0/detect?returnFaceId=true&returnFaceLandmarks=false";
+                        HashMap<String, String> params = new HashMap<String, String>();
+                        String image_path = "your local image path";
+                        params.put("your_extra_params", "value");
+                        MultipartRequest multipartRequest =
+                                new MultipartRequest(url, params, image_path, new Response.Listener<String>() {
+                                    @Override
+                                    public void onResponse(String response) {
+                                        Log.e(TAG, "Success Response: " + response.toString());
+
+                                    }
+                                }, new Response.ErrorListener() {
+
+                                    @Override
+                                    public void onErrorResponse(VolleyError error) {
+
+                                        if (error.networkResponse != null) {
+                                            Log.e(TAG, "Error Response code: " +
+                                                    error.networkResponse.statusCode);
+                                        }
+                                    });
+                        // Add the request to the RequestQueue.
+                        MySingleton.getInstance(context).addToRequestQueue(multipartrequest);
+
+
+
+                        /*Log.i("asdf", "BITMAP NOT NULL");
+                        File folder = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS) + "/EmailClient/");
+                        folder.mkdirs();
+                        File file = new File(folder,System.currentTimeMillis() + ".JPEG");
+                        try
+                        {
+                            file.mkdirs();
+                            Log.i("asdf", "TRIED SAVING");
+                            FileOutputStream fileOutputStream=new FileOutputStream(file);
+                            Log.i("asdf", "TRIED SAVING1");
+                            bitmap.compress(Bitmap.CompressFormat.JPEG,100, fileOutputStream);
+                            Log.i("asdf", "TRIED SAVING2");
+                            fileOutputStream.flush();
+                            fileOutputStream.close();
+
+                            Log.i("asdf", "SAVE SUCCESS");
+                        }
+                        catch(IOException e){
+                            e.printStackTrace();
+                            Log.i("asdf", Log.getStackTraceString(e));
+                        }
+                        catch(Exception exception)
+                        {
+                            exception.printStackTrace();
+                            Log.i("asdf", Log.getStackTraceString(exception));
+                        }*/
+
+                    }
+                }
+            }
+        });
+    }
     //==============================================================================================
     // Activity Methods
     //==============================================================================================
@@ -195,121 +280,56 @@ public final class FaceTrackerActivity extends AppCompatActivity {
             @Override
             public void onClick(View v) {
                 Log.i("asdf", "FIRIN MAH LAZAR");
-                clicked = true;
+                //clicked = true;
                 //turnFlashlightOn();
-
-                animate(demoImage, imagesToShow, 0, false);
-
-                new CountDownTimer(1000, 1000) {
-                    public void onTick(long millisUntilFinished) {
-                    }
-
-                    public void onFinish() {
-                        clicked = false;
-                        //turnFlashlightOff();
-                    }
-                }.start();
+                animate(demoImage);
             }
 
-            private void animate(final ImageView imageView, final int images[], final int imageIndex, final boolean forever) {
-
-                //imageView <-- The View which displays the images
-                //images[] <-- Holds R references to the images to display
-                //imageIndex <-- index of the first image to show in images[]
-                //forever <-- If equals true then after the last image it starts all over again with the first image resulting in an infinite loop. You have been warned.
-                /*int fadeInDuration = 5; // Configure time values here
-                int timeBetween = 0;
-                int fadeOutDuration = 1;
-
-                imageView.setVisibility(View.INVISIBLE);    //Visible or invisible by default - this will apply when the animation ends
-                imageView.setImageResource(images[imageIndex]);
-
-                Animation fadeIn = new AlphaAnimation(1, 1);
-                //fadeIn.setInterpolator(new DecelerateInterpolator()); // add this
-                fadeIn.setDuration(fadeInDuration);
-
-                Animation fadeOut = new AlphaAnimation(1, 1);
-                //fadeOut.setInterpolator(new AccelerateInterpolator()); // and this
-                //fadeOut.setStartOffset(fadeInDuration + timeBetween);
-                fadeOut.setDuration(fadeOutDuration);
-
-                AnimationSet animation = new AnimationSet(false); // change to false
-                //animation.addAnimation(fadeIn);
-                //animation.addAnimation(fadeOut);
-                animation.setRepeatCount(1);
-
-                animation.setAnimationListener(new Animation.AnimationListener() {
-                    public void onAnimationEnd(Animation animation) {
-                        if (images.length - 1 > imageIndex) {
-                            animate(imageView, images, imageIndex + 1, forever); //Calls itself until it gets to the end of the array
-                        } else {
-                            if (forever) {
-                                animate(imageView, images, 0, forever);  //Calls itself to start the animation all over again in a loop if forever = true
-                            }
-                        }
-                    }
-
-                    public void onAnimationRepeat(Animation animation) {
-                        // TODO Auto-generated method stub
-                    }
-
-                    public void onAnimationStart(Animation animation) {
-                        // TODO Auto-generated method stub
-                    }
-                });*/
+            private void animate(final ImageView imageView) {
+                imageView.setImageResource(R.drawable.laser_v2_00000);
                 imageView.setVisibility(View.VISIBLE);
-                new CountDownTimer(500, 500) {
-                    public void onTick(long millisUntilFinished) {
-                    }
-
+                final int duration = 1;
+                new CountDownTimer(duration, duration) {
+                    public void onTick(long millisUntilFinished) {}
                     public void onFinish() {
-                        imageView.setVisibility(View.INVISIBLE);
+                        imageView.setImageResource(R.drawable.laser_v2_00001);
+                        new CountDownTimer(duration, duration) {
+                            public void onTick(long millisUntilFinished) {}
+                            public void onFinish() {
+                                imageView.setImageResource(R.drawable.laser_v2_00002);
+                                new CountDownTimer(duration, duration) {
+                                    public void onTick(long millisUntilFinished) {}
+                                    public void onFinish() {
+                                        imageView.setImageResource(R.drawable.laser_v2_00003);
+                                        clicked = true;
+                                        new CountDownTimer(200, 200) {
+                                            public void onTick(long millisUntilFinished) {
+                                            }
+                                            public void onFinish() {
+                                                clicked = false;
+                                            }
+                                        }.start();
+                                        new CountDownTimer(duration, duration) {
+                                            public void onTick(long millisUntilFinished) {}
+                                            public void onFinish() {
+                                                imageView.setImageResource(R.drawable.laser_v2_00004);
+                                                new CountDownTimer(duration, duration) {
+                                                    public void onTick(long millisUntilFinished) {}
+                                                    public void onFinish() {
+                                                        imageView.setVisibility(View.INVISIBLE);
+                                                    }
+                                                }.start();
+                                            }
+                                        }.start();
+                                    }
+                                }.start();
+                            }
+                        }.start();
                     }
                 }.start();
             }
             //mp.start();
             //turnOnFlash();
-                /*mCameraSource.takePicture(null, new PictureCallback(){
-                    @Override
-                    public void onPictureTaken(byte[] data) {
-                        if (data != null) {
-                            Bitmap bitmap = BitmapFactory.decodeByteArray(data , 0, data .length);
-                            Log.i("asdf", "TOOK IN DATA");
-                            if(bitmap!=null){
-                                Log.i("asdf", "BITMAP NOT NULL");
-                                File file=new File(Environment.getExternalStorageDirectory()+"/dirr");
-                                if(!file.isDirectory()){
-                                    file.mkdir();
-                                }
-
-                                file=new File(Environment.getExternalStorageDirectory()+"/dirr",System.currentTimeMillis()+".jpg");
-                                try
-                                {
-                                    file.mkdirs();
-                                    Log.i("asdf", "TRIED SAVING");
-                                    FileOutputStream fileOutputStream=new FileOutputStream(file);
-                                    Log.i("asdf", "TRIED SAVING1");
-                                    bitmap.compress(Bitmap.CompressFormat.JPEG,100, fileOutputStream);
-                                    Log.i("asdf", "TRIED SAVING2");
-                                    fileOutputStream.flush();
-                                    fileOutputStream.close();
-
-                                    Log.i("asdf", "SAVE SUCCESS");
-                                }
-                                catch(IOException e){
-                                    e.printStackTrace();
-                                    Log.i("asdf", Log.getStackTraceString(e));
-                                }
-                                catch(Exception exception)
-                                {
-                                    exception.printStackTrace();
-                                    Log.i("asdf", Log.getStackTraceString(exception));
-                                }
-
-                            }
-                        }
-                    }
-                });*/
         });
 
         mPreview = (CameraSourcePreview) findViewById(R.id.preview);
@@ -562,7 +582,8 @@ public final class FaceTrackerActivity extends AppCompatActivity {
             if (clicked) {
                 Log.i("asdf", Float.toString(face.getPosition().y));
                 Rect hitbox = new Rect(Math.round(face.getPosition().x), Math.round(face.getPosition().y), Math.round(face.getPosition().x + face.getWidth()), Math.round(face.getPosition().y + face.getHeight()));
-                if (hitbox.contains(150, 200)) {
+                if (hitbox.contains(240, 320)) {
+                    takePicture();
                     mp.start();
                 }
             }
