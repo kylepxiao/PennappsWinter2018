@@ -20,6 +20,7 @@ import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.Dialog;
 import android.content.Context;
+import android.content.ContextWrapper;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
@@ -36,6 +37,7 @@ import android.os.CountDownTimer;
 import android.os.Environment;
 import android.os.Handler;
 import android.provider.MediaStore;
+import android.support.annotation.RequiresApi;
 import android.support.design.widget.Snackbar;
 import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AppCompatActivity;
@@ -76,24 +78,27 @@ import com.google.android.gms.samples.vision.face.facetracker.ui.camera.CameraSo
 import com.google.android.gms.samples.vision.face.facetracker.ui.camera.GraphicOverlay;
 import com.google.android.gms.vision.CameraSource.PictureCallback;
 
+import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
+import java.io.FileWriter;
 import java.io.IOException;
+import java.io.OutputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Timer;
 import java.util.TimerTask;
 
-import org.apache.http.HttpResponse;
-import org.apache.http.client.HttpClient;
-import org.apache.http.client.methods.HttpPost;
-import org.apache.http.entity.mime.HttpMultipartMode;
-import org.apache.http.entity.mime.MultipartEntity;
-import org.apache.http.entity.mime.content.ByteArrayBody;
-import org.apache.http.impl.client.DefaultHttpClient;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
+import com.loopj.android.http.*;
+
+import cz.msebera.android.httpclient.Header;
+import cz.msebera.android.httpclient.entity.FileEntity;
 
 //import static android.hardware.Camera.*;
 
@@ -225,18 +230,142 @@ public final class FaceTrackerActivity extends AppCompatActivity {
         }
     }
 
+    private String saveToInternalStorage(Bitmap bitmapImage){
+        ContextWrapper cw = new ContextWrapper(getApplicationContext());
+        // path to /data/data/yourapp/app_data/imageDir
+        File directory = cw.getDir("imageDir", Context.MODE_PRIVATE);
+        // Create imageDir
+        File mypath=new File(directory,"profile.jpg");
+
+        FileOutputStream fos = null;
+        try {
+            fos = new FileOutputStream(mypath);
+            // Use the compress method on the BitMap object to write image to the OutputStream
+            bitmapImage.compress(Bitmap.CompressFormat.PNG, 100, fos);
+        } catch (Exception e) {
+            e.printStackTrace();
+        } finally {
+            try {
+                fos.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+        return directory.getAbsolutePath();
+    }
+
+    public static void saveFile(Context context, Bitmap b, String picName) throws IOException {
+        FileOutputStream fos = null;
+        try {
+            fos = context.openFileOutput(picName, Context.MODE_PRIVATE);
+            b.compress(Bitmap.CompressFormat.PNG, 100, fos);
+        }
+        catch (FileNotFoundException e) {
+            Log.d(TAG, "file not found");
+            e.printStackTrace();
+        }
+        catch (IOException e) {
+            Log.d(TAG, "io exception");
+            e.printStackTrace();
+        } finally {
+            fos.close();
+        }
+    }
+
+    public static Bitmap loadBitmap(Context context, String picName) throws IOException {
+        Bitmap b = null;
+        FileInputStream fis = null;
+        try {
+            fis = context.openFileInput(picName);
+            b = BitmapFactory.decodeStream(fis);
+        }
+        catch (FileNotFoundException e) {
+            Log.d(TAG, "file not found");
+            e.printStackTrace();
+        }
+        catch (IOException e) {
+            Log.d(TAG, "io exception");
+            e.printStackTrace();
+        } finally {
+            fis.close();
+        }
+        return b;
+    }
+
+    public File getAlbumStorageDir(String albumName) {
+        // Get the directory for the user's public pictures directory.
+        File file = new File(Environment.getExternalStoragePublicDirectory(
+                Environment.DIRECTORY_PICTURES), albumName);
+        if (!file.mkdirs()) {
+            Log.e("asdf", "Directory not created");
+        }
+        return file;
+    }
+
     private void takePicture(){
         mCameraSource.takePicture(null, new PictureCallback(){
+            @RequiresApi(api = Build.VERSION_CODES.KITKAT)
             @Override
             public void onPictureTaken(byte[] data) {
                 if (data != null) {
-                    Bitmap bitmap = BitmapFactory.decodeByteArray(data , 0, data .length);
+                    Bitmap bitmap = BitmapFactory.decodeByteArray(data , 0, data.length);
+
                     if(bitmap!=null){
                         //((ImageView) findViewById(R.id.crosshair)).setImageBitmap(bitmap);
-                        String url = "https://eastus.api.cognitive.microsoft.com/face/v1.0/detect?returnFaceId=true&returnFaceLandmarks=false";
-                        HashMap<String, String> params = new HashMap<String, String>();
-                        String image_path = "your local image path";
-                        params.put("your_extra_params", "value");
+
+                        /*AsyncHttpClient client = new AsyncHttpClient();
+                        client.addHeader("Content-Type", "application/octet-stream");
+                        client.addHeader("Ocp-Apim-Subscription-Key", "ddc8bd86b06b4a9ea2f12037e6d8a903");
+                        RequestParams params = new RequestParams();
+                        ByteArrayOutputStream stream = new ByteArrayOutputStream();
+                        bitmap.compress(Bitmap.CompressFormat.JPEG, 100, stream);
+                        try {
+                            stream.flush();
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        }*/
+
+                        //String save = "http://ec2-54-84-172-101.compute-1.amazonaws.com/instance/" + System.currentTimeMillis() + ".bmp";
+                        //Log.i("asdf", save);
+                        /*try {
+                            params.put("data", f);
+                        } catch (FileNotFoundException e) {
+                            Log.i("asdf", Log.getStackTraceString(e));
+                        }*/
+                        AsyncHttpClient client = new AsyncHttpClient();
+                        //client.addHeader("Content-Type", "application/octet-stream");
+                        client.addHeader("Ocp-Apim-Subscription-Key", "ddc8bd86b06b4a9ea2f12037e6d8a903");
+                        RequestParams params = new RequestParams();
+                        params.put("picture", bitmap);
+                        String name = System.currentTimeMillis() + ".bmp";
+                        params.put("name", name);
+                        params.put("filename", name);
+                        params.put("id", name);
+                        Log.i("asdf", name);
+                        client.post("http://ec2-54-84-172-101.compute-1.amazonaws.com/upload_file", params, new AsyncHttpResponseHandler() {
+                            @Override
+                            public void onSuccess(int statusCode, Header[] headers, byte[] responseBody) {
+
+                            }
+
+                            @Override
+                            public void onFailure(int statusCode, Header[] headers, byte[] responseBody, Throwable error) {
+                            }
+
+                            /*@Override
+                            public void onFailure(int statusCode, Header[] headers, String responseString, Throwable throwable) {
+                                // error handling
+                                Log.i("asdf", responseString);
+                            }
+
+                            @Override
+                            public void onSuccess(int statusCode, Header[] headers, String responseString) {
+                                // success
+                                Log.i("asdf", responseString);
+                            }*/
+                        });
+
+
                         /*MultipartRequest multipartRequest =
                                 new MultipartRequest(url, params, image_path, new Response.Listener<String>() {
                                     @Override
